@@ -1,0 +1,23 @@
+# Stage 1: Build the cloudflared binary
+FROM ubuntu:latest AS builder
+ARG ARCH
+RUN apt-get update && apt-get install -y curl
+RUN ARCH=$(dpkg --print-architecture); \
+    case ${ARCH} in \
+        amd64|x86_64) \
+            curl -L -o /cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-amd64 ;; \
+        i386|x86) \
+            curl -L -o /cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-386 ;; \
+        armhf) \
+            curl -L -o /cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm ;; \
+        arm64|aarch64) \
+            curl -L -o /cloudflared https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm64 ;; \
+        *) \
+            echo "Architecture not supported"; exit 1 ;; \
+    esac && \
+    chmod +x /cloudflared
+
+# Stage 2: Create the final image
+FROM ubuntu:latest
+COPY --from=builder /cloudflared /usr/local/bin/cloudflared
+CMD ["/usr/local/bin/cloudflared"]
